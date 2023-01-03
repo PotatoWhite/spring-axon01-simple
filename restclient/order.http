@@ -1,0 +1,5 @@
+### create order
+POST localhost:8080/orders/ship-order
+
+### get all orders
+GET localhost:8080/orders
