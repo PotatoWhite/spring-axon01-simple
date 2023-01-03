@@ -1,4 +1,5 @@
 # Axon Framework을 이용한 Event Sourcing 구현 예제
+- 본 예제는 https://github.com/eugenp/tutorials/tree/master/axon 의 예제를 기반으로 작성되었습니다.
 
 ## 순서
 
