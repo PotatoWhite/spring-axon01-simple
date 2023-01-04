@@ -1,5 +1,11 @@
 ### create order
 POST localhost:8080/orders/ship-order
+Content-Type: application/json
+
+{
+  "productId": "1",
+  "address": "1234 Main St"
+}
 
 ### get all orders
 GET localhost:8080/orders

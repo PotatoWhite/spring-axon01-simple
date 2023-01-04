@@ -142,6 +142,8 @@ public final class OrderShippedEvent {
 public class OrderAggregate {
   @AggregateIdentifier
   private String  orderId;
+  private String  productId;
+  private String  address;
   private boolean orderConfirmed;
 
   protected OrderAggregate() {
@@ -155,6 +157,7 @@ public class OrderAggregate {
   @EventSourcingHandler
   public void on(OrderCreatedEvent event) {
     this.orderId        = event.getOrderId();
+    this.productId      = event.getProductId();
     this.orderConfirmed = false;
   }
 
@@ -175,6 +178,11 @@ public class OrderAggregate {
     if (!orderConfirmed) throw new UnconfirmedOrderException(command.getOrderId());
 
     AggregateLifecycle.apply(new OrderShippedEvent(command.getOrderId(), command.getAddress()));
+  }
+
+  @EventSourcingHandler
+  public void on(OrderShippedEvent event) {
+    this.address = event.getAddress();
   }
 }
 ```
