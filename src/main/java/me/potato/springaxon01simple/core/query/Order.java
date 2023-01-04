@@ -6,9 +6,11 @@ import lombok.RequiredArgsConstructor;
 @Data
 @RequiredArgsConstructor
 public class Order {
-    private final String      orderId;
-    private final String      productId;
-    private       OrderStatus orderStatus = OrderStatus.CREATED;
+    private final String orderId;
+    private final String productId;
+
+    private String      address;
+    private OrderStatus orderStatus = OrderStatus.CREATED;
 
     public void setOrderConfirmed() {
         this.orderStatus = OrderStatus.CONFIRMED;

@@ -19,6 +19,8 @@ class OrderAggregateTest {
     private static final String ORDER_ID   = UUID.randomUUID().toString();
     private static final String PRODUCT_ID = UUID.randomUUID().toString();
 
+    private static final String ADDRESS = "1234 Main Street, Anytown, USA";
+
     @BeforeEach
     public void setUp() {
         fixture = new AggregateTestFixture<>(OrderAggregate.class);
@@ -34,14 +36,14 @@ class OrderAggregateTest {
     @Test
     public void ConfirmOrderCommand_success() {
         fixture.given(new OrderCreatedEvent(ORDER_ID, PRODUCT_ID), new OrderConfirmedEvent(ORDER_ID))
-                .when(new ShipOrderCommand(ORDER_ID))
-                .expectEvents(new OrderShippedEvent(ORDER_ID));
+                .when(new ShipOrderCommand(ORDER_ID, ADDRESS))
+                .expectEvents(new OrderShippedEvent(ORDER_ID, ADDRESS));
     }
 
     @Test
     public void ConfirmOrderCommand_fail() {
         fixture.given(new OrderCreatedEvent(ORDER_ID, PRODUCT_ID))
-                .when(new ShipOrderCommand(ORDER_ID))
+                .when(new ShipOrderCommand(ORDER_ID, ADDRESS))
                 .expectException(UnconfirmedOrderException.class);
     }
 }

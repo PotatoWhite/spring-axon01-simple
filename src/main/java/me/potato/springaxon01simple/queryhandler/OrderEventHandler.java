@@ -36,6 +36,7 @@ public class OrderEventHandler {
     public void on(OrderShippedEvent event) {
         orders.computeIfPresent(event.getOrderId(), (orderId, order) -> {
             order.setOrderShipped();
+            order.setAddress(event.getAddress());
             return order;
         });
     }

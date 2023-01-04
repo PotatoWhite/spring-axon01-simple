@@ -49,6 +49,6 @@ public class OrderAggregate {
     public void handle(ShipOrderCommand command) {
         if (!orderConfirmed) throw new UnconfirmedOrderException(command.getOrderId());
 
-        AggregateLifecycle.apply(new OrderShippedEvent(command.getOrderId()));
+        AggregateLifecycle.apply(new OrderShippedEvent(command.getOrderId(), command.getAddress()));
     }
 }

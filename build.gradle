@@ -25,8 +25,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     // axon
-    implementation 'org.axonframework:axon-spring-boot-starter:4.6.3'
-    testImplementation 'org.axonframework:axon-test:4.6.3'
+    implementation 'org.axonframework:axon-spring-boot-starter:4.6.0'
+    implementation 'org.axonframework.extensions.reactor:axon-reactor-spring-boot-autoconfigure:4.6.0'
+    testImplementation 'org.axonframework:axon-test:4.6.0'
+
 }
 
 tasks.named('test') {

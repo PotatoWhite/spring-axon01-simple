@@ -7,5 +7,5 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public final class OrderShippedEvent {
     private final String orderId;
-
+    private final String address;
 }

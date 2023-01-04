@@ -11,6 +11,7 @@
 5. Query Handler 구현
 6. Endpoint 구현
 7. Unit Test
+8. 정리
 
 ---
 
@@ -46,14 +47,15 @@ docker run -d -e AXONIQ_AXONSERVER_NAME=order_demo -p 8024:8024 -p 8124:8124 -p 
 ## build.gradle axon framework 추가
 
 ```groovy
- // axon
-implementation 'org.axonframework:axon-spring-boot-starter:4.6.3'
-testImplementation 'org.axonframework:axon-test:4.6.3'
+// axon
+implementation 'org.axonframework:axon-spring-boot-starter:4.6.0'
+implementation 'org.axonframework.extensions.reactor:axon-reactor-spring-boot-autoconfigure:4.6.0'
+testImplementation 'org.axonframework:axon-test:4.6.0'
 ```
 
 ## application.yml
 
-```yaml에
+```yaml
 axon:
   axonserver:
     servers: localhost:8124
@@ -70,13 +72,11 @@ axon:
 ```java
 
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CreateOrderCommand {
-
-    @TargetAggregateIdentifier
-    private final String orderId;
-    private final String productId;
-
+  @TargetAggregateIdentifier
+  private final String orderId;
+  private final String productId;
 }
 
 @Data
@@ -89,8 +89,9 @@ public final class ConfirmOrderCommand {
 @Data
 @RequiredArgsConstructor
 public final class ShipOrderCommand {
-    @TargetAggregateIdentifier
-    private final String orderId;
+  @TargetAggregateIdentifier
+  private final String orderId;
+  private final String address;
 }
 ```
 
@@ -123,7 +124,7 @@ public final class OrderConfirmedEvent {
 @RequiredArgsConstructor
 public final class OrderShippedEvent {
     private final String orderId;
-
+    private final String address;
 }
 ```
 
@@ -171,7 +172,7 @@ public class OrderAggregate {
   public void handle(ShipOrderCommand command) {
     if (!orderConfirmed) throw new UnconfirmedOrderException(command.getOrderId());
 
-    AggregateLifecycle.apply(new OrderShippedEvent(command.getOrderId()));
+    AggregateLifecycle.apply(new OrderShippedEvent(command.getOrderId(), command.getAddress()));
   }
 }
 ```
@@ -249,6 +250,7 @@ public class OrderEventHandler {
   public void on(OrderShippedEvent event) {
     orders.computeIfPresent(event.getOrderId(), (orderId, order) -> {
       order.setOrderShipped();
+      order.setAddress(event.getAddress());
       return order;
     });
   }
@@ -274,24 +276,26 @@ public class OrderEventHandler {
 @RestController
 @RequestMapping("orders")
 public class OrderRestEndpoint {
-    private final CommandGateway commandGateway;
-    private final QueryGateway   queryGateway;
+  private final ReactorCommandGateway commandGateway;
+  private final ReactorQueryGateway   queryGateway;
 
-    @PostMapping("ship-order")
-    public Mono shipOrder() {
-      var orderId   = UUID.randomUUID().toString();
-      var productId = UUID.randomUUID().toString();
-      log.info("shipOrder: orderId={}, productId={}", orderId, productId);
+  @PostMapping("ship-order")
+  public Mono<Object> shipOrder(@RequestBody CreateOrderCommandRequest request) {
+    log.info("Received request to ship order: {}", request);
 
-      return Mono.fromFuture(commandGateway.send(new CreateOrderCommand(orderId, productId))
-                .thenCompose(s -> commandGateway.send(new ConfirmOrderCommand(orderId)))
-                .thenCompose(s -> commandGateway.send(new ShipOrderCommand(orderId))));
-    }
+    // create new OrderId and send command to ship order
+    var orderId            = UUID.randomUUID().toString();
+    var createOrderCommand = new CreateOrderCommand(orderId, request.productId());
 
-    @GetMapping
-    public Mono<List<Order>> getOrders() {
-        return Mono.fromFuture(queryGateway.query(new FindAllOrderedProductsQuery(), ResponseTypes.multipleInstancesOf(Order.class)));
-    }
+    return commandGateway.send(createOrderCommand)
+            .then(commandGateway.send(new ConfirmOrderCommand(orderId)))
+            .then(commandGateway.send(new ShipOrderCommand(orderId, request.address())));
+  }
+
+  @GetMapping
+  public Mono<List<Order>> getOrders() {
+    return queryGateway.query(new FindAllOrderedProductsQuery(), ResponseTypes.multipleInstancesOf(Order.class));
+  }
 }
 ```
 ### @PostMapping("ship-order")
@@ -316,6 +320,8 @@ class OrderAggregateTest {
   private static final String ORDER_ID   = UUID.randomUUID().toString();
   private static final String PRODUCT_ID = UUID.randomUUID().toString();
 
+  private static final String ADDRESS = "1234 Main Street, Anytown, USA";
+
   @BeforeEach
   public void setUp() {
     fixture = new AggregateTestFixture<>(OrderAggregate.class);
@@ -331,14 +337,14 @@ class OrderAggregateTest {
   @Test
   public void ConfirmOrderCommand_success() {
     fixture.given(new OrderCreatedEvent(ORDER_ID, PRODUCT_ID), new OrderConfirmedEvent(ORDER_ID))
-            .when(new ShipOrderCommand(ORDER_ID))
+            .when(new ShipOrderCommand(ORDER_ID, ADDRESS))
             .expectEvents(new OrderShippedEvent(ORDER_ID));
   }
 
   @Test
   public void ConfirmOrderCommand_fail() {
     fixture.given(new OrderCreatedEvent(ORDER_ID, PRODUCT_ID))
-            .when(new ShipOrderCommand(ORDER_ID))
+            .when(new ShipOrderCommand(ORDER_ID, ADDRESS))
             .expectException(UnconfirmedOrderException.class);
   }
 }
@@ -349,6 +355,38 @@ class OrderAggregateTest {
 ### @Test
 - Test Fixture를 통해 Command를 전달하고, Event를 검증합니다.
 
+---
+# 8. 정리
+## Axon Framework
+- Axon Framework는 Command와 Query를 처리하는 Component를 제공합니다.
+  - Command Model
+    - Command는 Aggregate에 전달되고, Event를 발생시킵니다.
+    - Aggregate는 Event를 Event Store에 저장합니다.
+    - Event Store에 저장된 Event를 Event Processor인 EventHandler에 전달합니다.
+  - Query Model
+    - Query Model은 Event Store에 저장된 Event를 조회하여 계산합니다. 
+    - 계산된 결과를 별도의 Query Model 저장소에 저장 할 수 있습니다.
+    
+## Axon Annotation
+- @Aggregate
+  - Aggregate를 정의합니다.
+  - Aggregate는 Event를 발생시키는 Command를 처리합니다.
+- @CommandHandler
+  - Aggregate에 Command를 전달합니다.
+  - Command를 처리하고, Event를 발생시킵니다.
+- @EventSourcingHandler
+  - Event를 처리합니다.
+  - Event를 처리하여 Aggregate의 상태를 변경합니다.
+- @EventHandler
+- Event를 처리합니다.
+  - Event를 처리하여 Query Model을 변경합니다.
+- @QueryHandler
+  - Query를 처리합니다.
+### EventSourcingHandler와 EventHandler의 차이
+- EventSourcingHandler는 Event를 처리하여 Aggregate의 상태를 변경합니다.
+- EventHandler는 Event를 처리하여 Query Model을 변경합니다.
+- EventSourcingHandler는 Aggregate에만 사용할 수 있습니다.
+- EventHandler는 Query Model에만 사용할 수 있습니다.
 
 
 ---

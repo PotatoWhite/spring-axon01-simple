@@ -9,4 +9,5 @@ import org.axonframework.modelling.command.TargetAggregateIdentifier;
 public final class ShipOrderCommand {
     @TargetAggregateIdentifier
     private final String orderId;
+    private final String address;
 }
