@@ -1,0 +1,30 @@
+### create order
+POST http://localhost:8080/command/order
+Content-Type: Application/json
+
+### Add product to orderlines(cart)
+POST http://localhost:8080/command/order/{{orderId}}/product/product1
+
+### increase quantity of product in orderlines(cart)
+POST http://localhost:8080/command/order/{{orderId}}/product/product1/increment
+
+### decrease quantity of product in orderlines(cart)
+POST http://localhost:8080/command/order/{{orderId}}/product/product1/decrement
+
+
+### confirm order
+POST http://localhost:8080/command/order/{{orderId}}/confirm
+
+### ship order
+POST http://localhost:8080/command/order/{{orderId}}/ship
+Content-Type: application/json
+
+{
+  "address": "address1"
+}
+
+### get all
+GET http://localhost:8080/query/order/all-orders
+
+### get all products in shipping
+GET http://localhost:8080/query/order/total-shipped/product1

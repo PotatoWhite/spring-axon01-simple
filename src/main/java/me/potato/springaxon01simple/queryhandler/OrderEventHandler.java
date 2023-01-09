@@ -1,18 +1,15 @@
 package me.potato.springaxon01simple.queryhandler;
 
-import me.potato.springaxon01simple.core.events.OrderConfirmedEvent;
-import me.potato.springaxon01simple.core.events.OrderCreatedEvent;
-import me.potato.springaxon01simple.core.events.OrderShippedEvent;
-import me.potato.springaxon01simple.core.query.FindAllOrderedProductsQuery;
+import lombok.Data;
+import me.potato.springaxon01simple.core.events.*;
 import me.potato.springaxon01simple.core.query.Order;
 import org.axonframework.eventhandling.EventHandler;
-import org.axonframework.queryhandling.QueryHandler;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+@Data
 @Service
 public class OrderEventHandler {
 
@@ -21,7 +18,7 @@ public class OrderEventHandler {
 
     @EventHandler
     public void on(OrderCreatedEvent event) {
-        orders.put(event.getOrderId(), new Order(event.getOrderId(), event.getProductId()));
+        orders.put(event.getOrderId(), new Order(event.getOrderId()));
     }
 
     @EventHandler
@@ -41,8 +38,36 @@ public class OrderEventHandler {
         });
     }
 
-    @QueryHandler
-    public List<Order> handle(FindAllOrderedProductsQuery query) {
-        return orders.values().stream().toList();
+    // session 02 : ProductAddedEvent
+    @EventHandler
+    public void on(ProductAddedEvent event) {
+        orders.computeIfPresent(event.getOrderId(), (orderId, order) -> {
+            order.addProduct(event.getProductId());
+            return order;
+        });
+    }
+
+    @EventHandler
+    public void on(ProductCountIncrementedEvent event) {
+        orders.computeIfPresent(event.getOrderId(), (orderId, value) -> {
+            value.increaseProduct(event.getProductId());
+            return value;
+        });
+    }
+
+    @EventHandler
+    public void on(ProductCountDecrementedEvent event) {
+        orders.computeIfPresent(event.getOrderId(), (orderId, value) -> {
+            value.decreaseProduct(event.getProductId());
+            return value;
+        });
+    }
+
+    @EventHandler
+    public void on(ProductRemovedEvent event) {
+        orders.computeIfPresent(event.getOrderId(), (orderId, order) -> {
+            order.removeProduct(event.getProductId());
+            return order;
+        });
     }
 }

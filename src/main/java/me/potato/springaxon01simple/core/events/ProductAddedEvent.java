@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public final class OrderCreatedEvent {
+public class ProductAddedEvent {
     private final String orderId;
+    private final String productId;
 }
